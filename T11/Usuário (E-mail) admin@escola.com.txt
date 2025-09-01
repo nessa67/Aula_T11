@@ -1,0 +1,2 @@
+Usuário (E-mail): admin@escola.com
+Senha: admin123

@@ -1,0 +1,1692 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1046{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset1 Segoe UI Symbol;}}
+{\colortbl ;\red192\green192\blue192;\red0\green0\blue255;\red0\green255\blue255;}
+{\*\generator Riched20 10.0.22621}\viewkind4\uc1 
+\pard\sl240\slmult1\b\f0\fs22\lang22 Projeto: Controle de Estoque\par
+\b0\par
+\highlight1\b 1) Estrutura:\par
+\highlight0\b0 -admin (pasta)\par
+\tab --gerenciar_materiais.php\par
+\tab --gerenciar_solicitacoes.php\par
+\tab --gerenciar_usuarios.php\par
+\tab --index.php\par
+\tab --relatorios.php\par
+-api (pasta)\par
+\tab --get_stock.php\par
+-assets (pasta)\par
+\tab -css (pasta)\par
+\tab\tab --style.css\par
+-auth (pasta)\par
+\tab --login.php\par
+\tab --logout.php\par
+-requisitante (pasta)\par
+\tab --criar_solicitacao.php\par
+\tab --historico.php\par
+\tab --index.php\par
+-templates (pasta)\par
+\tab --footer.php\par
+\tab --header.php\par
+config.php\par
+Criar_Base.txt\par
+gerar_hash.php\par
+index.php\par
+ver_solicitacao.php\par
+\par
+\highlight1\b 2) Acesso para administrador (recomenda\'e7\'e3o)\par
+\highlight0\b0\par
+Usu\'e1rio (E-mail): admin@escola.com\par
+Senha: admin123\par
+\par
+\highlight1\b 3) C\'f3digos na pasta raiz do projeto:\par
+\highlight0\b0\par
+\b Criar_Base.txt: \b0 Comandos para execu\'e7\'e3o "SQL" da base padr\'e3o\b\par
+\par
+\b0 -- =========================================================\par
+-- REESTRUTURA\'c7\'c3O COMPLETA DO BANCO DE DADOS\par
+-- Sistema: Controle de Estoque - Escola T\'e9cnica de Enfermagem\par
+-- =========================================================\par
+\par
+-- Criar banco de dados\par
+DROP DATABASE IF EXISTS `escola_enfermagem_estoque`;\par
+CREATE DATABASE IF NOT EXISTS `escola_enfermagem_estoque`\par
+  DEFAULT CHARACTER SET utf8mb4\par
+  COLLATE utf8mb4_general_ci;\par
+\par
+USE `escola_enfermagem_estoque`;\par
+\par
+-- --------------------------------------------------------\par
+-- Tabela: usuarios\par
+-- --------------------------------------------------------\par
+CREATE TABLE `usuarios` (\par
+  `id_usuario` INT(11) NOT NULL AUTO_INCREMENT,\par
+  `nome` VARCHAR(100) NOT NULL,\par
+  `email` VARCHAR(100) NOT NULL,\par
+  `senha` VARCHAR(255) NOT NULL,\par
+  `perfil` ENUM('admin','requisitante') NOT NULL,\par
+  `status` TINYINT(1) NOT NULL DEFAULT 1,\par
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),\par
+  PRIMARY KEY (`id_usuario`),\par
+  UNIQUE KEY `email` (`email`)\par
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\par
+\par
+-- Inserir administrador padr\'e3o (senha: admin123)\par
+INSERT INTO `usuarios` (`nome`, `email`, `senha`, `perfil`, `status`) VALUES\par
+('Administrador Padr\'e3o', 'admin@escola.com', '$2y$10$e.p6.jIqC2wZ6y.e0b5ZLOwW.3q.2E/n9w5t3jD/a3r2c3v4X5y6z.', 'admin', 1);\par
+\par
+-- --------------------------------------------------------\par
+-- Tabela: materiais\par
+-- --------------------------------------------------------\par
+CREATE TABLE `materiais` (\par
+  `id_material` INT(11) NOT NULL AUTO_INCREMENT,\par
+  `nome` VARCHAR(100) NOT NULL,\par
+  `codigo_interno` VARCHAR(50) DEFAULT NULL,\par
+  `categoria` VARCHAR(50) NOT NULL,\par
+  `tipo` ENUM('consumivel','reutilizavel') NOT NULL,\par
+  `quantidade` INT(11) NOT NULL DEFAULT 0,\par
+  `quantidade_min` INT(11) NOT NULL DEFAULT 0,\par
+  `status` TINYINT(1) NOT NULL DEFAULT 1,\par
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),\par
+  PRIMARY KEY (`id_material`),\par
+  UNIQUE KEY `codigo_interno` (`codigo_interno`)\par
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\par
+\par
+-- --------------------------------------------------------\par
+-- Tabela: solicitacoes\par
+-- --------------------------------------------------------\par
+CREATE TABLE `solicitacoes` (\par
+  `id_solicitacao` INT(11) NOT NULL AUTO_INCREMENT,\par
+  `id_usuario` INT(11) NOT NULL,\par
+  `data_prevista` DATE NOT NULL,\par
+  `hora_prevista` TIME NOT NULL,\par
+  `local_previsto` VARCHAR(100) NOT NULL,\par
+  `status` ENUM('pendente','aprovado','recusado','entregue','devolvido') NOT NULL DEFAULT 'pendente',\par
+  `observacoes` TEXT DEFAULT NULL,\par
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),\par
+  `atualizado_em` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(),\par
+  PRIMARY KEY (`id_solicitacao`),\par
+  KEY `id_usuario` (`id_usuario`)\par
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\par
+\par
+-- --------------------------------------------------------\par
+-- Tabela: solicitacao_itens\par
+-- --------------------------------------------------------\par
+CREATE TABLE `solicitacao_itens` (\par
+  `id_item` INT(11) NOT NULL AUTO_INCREMENT,\par
+  `id_solicitacao` INT(11) NOT NULL,\par
+  `id_material` INT(11) NOT NULL,\par
+  `quantidade_solic` INT(11) NOT NULL,\par
+  `quantidade_entreg` INT(11) DEFAULT 0,\par
+  `quantidade_dev` INT(11) DEFAULT 0,\par
+  PRIMARY KEY (`id_item`),\par
+  KEY `id_solicitacao` (`id_solicitacao`),\par
+  KEY `id_material` (`id_material`)\par
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\par
+\par
+-- --------------------------------------------------------\par
+-- Tabela: logs_auditoria\par
+-- --------------------------------------------------------\par
+CREATE TABLE `logs_auditoria` (\par
+  `id_log` INT(11) NOT NULL AUTO_INCREMENT,\par
+  `id_usuario` INT(11) NOT NULL,\par
+  `acao` VARCHAR(100) NOT NULL,\par
+  `detalhes` TEXT DEFAULT NULL,\par
+  `data_hora` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),\par
+  PRIMARY KEY (`id_log`),\par
+  KEY `id_usuario` (`id_usuario`)\par
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\par
+\par
+-- --------------------------------------------------------\par
+-- Chaves Estrangeiras\par
+-- --------------------------------------------------------\par
+ALTER TABLE `solicitacoes`\par
+  ADD CONSTRAINT `solicitacoes_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;\par
+\par
+ALTER TABLE `solicitacao_itens`\par
+  ADD CONSTRAINT `solicitacao_itens_ibfk_1` FOREIGN KEY (`id_solicitacao`) REFERENCES `solicitacoes` (`id_solicitacao`) ON DELETE CASCADE,\par
+  ADD CONSTRAINT `solicitacao_itens_ibfk_2` FOREIGN KEY (`id_material`) REFERENCES `materiais` (`id_material`) ON DELETE CASCADE;\par
+\par
+ALTER TABLE `logs_auditoria`\par
+  ADD CONSTRAINT `logs_auditoria_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;\par
+\par
+\par
+\b gerar_hash.php: \b0 Se a pasta do projeto for "sistema_estoque" executar da seguinte forma: {{\field{\*\fldinst{HYPERLINK http://localhost/sistema_estoque/gerar_hash.php }}{\fldrslt{http://localhost/sistema_estoque/gerar_hash.php\ul0\cf0}}}}\f0\fs22\par
+\par
+<?php\par
+// Defina a senha que voc\'ea deseja usar\par
+$senha_para_testar = 'admin123';\par
+\par
+// Gera o hash seguro\par
+$hash = password_hash($senha_para_testar, PASSWORD_DEFAULT);\par
+\par
+// Exibe o hash\par
+echo "<h1>Hash Gerado</h1>";\par
+echo "<p>Sua senha '<strong>" . htmlspecialchars($senha_para_testar) . "</strong>' gerou o seguinte hash:</p>";\par
+echo "<textarea rows='3' cols='80' readonly>" . htmlspecialchars($hash) . "</textarea>";\par
+echo "<p>Copie o c\'f3digo acima e siga as instru\'e7\'f5es para atualizar o banco de dados.</p>";\par
+?>\par
+\par
+\b config.php\par
+\par
+\b0 <?php\par
+// Configura\'e7\'f5es do Banco de Dados\par
+define('DB_HOST', 'localhost');\par
+define('DB_PORT', '7306'); // <-- ADICIONE ESTA LINHA PARA A PORTA\par
+define('DB_USER', 'root');\par
+define('DB_PASS', '');\par
+define('DB_NAME', 'escola_enfermagem_estoque');\par
+\par
+// Habilitar exibi\'e7\'e3o de erros para depura\'e7\'e3o\par
+ini_set('display_errors', 1);\par
+error_reporting(E_ALL);\par
+\par
+// Iniciar a sess\'e3o\par
+if (session_status() == PHP_SESSION_NONE) \{\par
+    session_start();\par
+\}\par
+\par
+// Conex\'e3o com o banco de dados\par
+try \{\par
+    // MODIFIQUE A LINHA ABAIXO para incluir a porta na string de conex\'e3o\par
+    $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8";\par
+    $pdo = new PDO($dsn, DB_USER, DB_PASS);\par
+\par
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);\par
+\} catch (PDOException $e) \{\par
+    die("ERRO: N\'e3o foi poss\'edvel conectar ao banco de dados. " . $e->getMessage());\par
+\}\par
+\par
+/**\par
+ * Registra uma a\'e7\'e3o no log de auditoria.\par
+ * @param PDO $pdo Objeto de conex\'e3o com o banco.\par
+ * @param int $id_usuario ID do usu\'e1rio que realizou a a\'e7\'e3o.\par
+ * @param string $acao Descri\'e7\'e3o da a\'e7\'e3o.\par
+ * @param string $detalhes Detalhes adicionais.\par
+ */\par
+function registrar_log($pdo, $id_usuario, $acao, $detalhes = '')\par
+\{\par
+    try \{\par
+        $sql = "INSERT INTO logs_auditoria (id_usuario, acao, detalhes) VALUES (?, ?, ?)";\par
+        $stmt = $pdo->prepare($sql);\par
+        $stmt->execute([$id_usuario, $acao, $detalhes]);\par
+    \} catch (PDOException $e) \{\par
+        error_log('Erro ao registrar log de auditoria: ' . $e->getMessage());\par
+    \}\par
+\}\par
+\par
+// Fun\'e7\'e3o de verifica\'e7\'e3o de login\par
+function check_login($required_profile) \{\par
+    if (!isset($_SESSION['id_usuario']) || $_SESSION['perfil'] !== $required_profile) \{\par
+        // Registrar tentativa de acesso indevido\par
+        if (isset($_SESSION['id_usuario'])) \{\par
+            global $pdo;\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Acesso Negado', 'Tentativa de acesso \'e0 \'e1rea: ' . $required_profile);\par
+        \}\par
+        header("Location: /sistema_estoque/auth/login.php");\par
+        exit();\par
+    \}\par
+\}\par
+?>\par
+\par
+\b index.php\par
+\par
+\b0 <?php\par
+require_once 'config.php';\par
+\par
+if (!isset($_SESSION['id_usuario'])) \{\par
+    header("Location: auth/login.php");\par
+    exit();\par
+\}\par
+\par
+// Redireciona com base no perfil do usu\'e1rio\par
+if ($_SESSION['perfil'] === 'admin') \{\par
+    header("Location: admin/index.php");\par
+    exit();\par
+\} elseif ($_SESSION['perfil'] === 'requisitante') \{\par
+    header("Location: requisitante/index.php");\par
+    exit();\par
+\} else \{\par
+    // Se o perfil for desconhecido, faz logout por seguran\'e7a\par
+    header("Location: auth/logout.php");\par
+    exit();\par
+\}\par
+?>\par
+\par
+\b ver_solicitacao.php\par
+\par
+\b0 <?php\par
+require_once 'templates/header.php';\par
+\par
+// Verificar se o usu\'e1rio est\'e1 logado\par
+if (!isset($_SESSION['id_usuario'])) \{\par
+    header("Location: /sistema_estoque/auth/login.php");\par
+    exit();\par
+\}\par
+\par
+$id_solicitacao = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);\par
+if (!$id_solicitacao) \{\par
+    echo "<p class='error'>ID de solicita\'e7\'e3o inv\'e1lido.</p>";\par
+    require_once 'templates/footer.php';\par
+    exit();\par
+\}\par
+\par
+try \{\par
+    // Buscar dados da solicita\'e7\'e3o e nome do requisitante\par
+    $stmt_solicitacao = $pdo->prepare("\par
+        SELECT s.*, u.nome AS nome_usuario, u.email AS email_usuario\par
+        FROM solicitacoes s\par
+        JOIN usuarios u ON s.id_usuario = u.id_usuario\par
+        WHERE s.id_solicitacao = ?\par
+    ");\par
+    $stmt_solicitacao->execute([$id_solicitacao]);\par
+    $solicitacao = $stmt_solicitacao->fetch(PDO::FETCH_ASSOC);\par
+\par
+    if (!$solicitacao) \{\par
+        throw new Exception("Solicita\'e7\'e3o n\'e3o encontrada.");\par
+    \}\par
+\par
+    // VERIFICA\'c7\'c3O DE PERMISS\'c3O:\par
+    // Um requisitante s\'f3 pode ver suas pr\'f3prias solicita\'e7\'f5es. Um admin pode ver todas.\par
+    if ($_SESSION['perfil'] === 'requisitante' && $solicitacao['id_usuario'] != $_SESSION['id_usuario']) \{\par
+        registrar_log($pdo, $_SESSION['id_usuario'], 'Acesso Negado', "Tentativa de ver solicita\'e7\'e3o #\{$id_solicitacao\} de outro usu\'e1rio.");\par
+        throw new Exception("Acesso negado. Voc\'ea n\'e3o tem permiss\'e3o para ver esta solicita\'e7\'e3o.");\par
+    \}\par
+\par
+    // Buscar itens da solicita\'e7\'e3o\par
+    $stmt_itens = $pdo->prepare("\par
+        SELECT si.*, m.nome AS nome_material, m.codigo_interno\par
+        FROM solicitacao_itens si\par
+        JOIN materiais m ON si.id_material = m.id_material\par
+        WHERE si.id_solicitacao = ?\par
+    ");\par
+    $stmt_itens->execute([$id_solicitacao]);\par
+    $itens = $stmt_itens->fetchAll(PDO::FETCH_ASSOC);\par
+\par
+\} catch (Exception $e) \{\par
+    echo "<p class='error'>Erro: " . htmlspecialchars($e->getMessage()) . "</p>";\par
+    require_once 'templates/footer.php';\par
+    exit();\par
+\}\par
+?>\par
+\par
+<h2>Detalhes da Solicita\'e7\'e3o N\'ba <?php echo $solicitacao['id_solicitacao']; ?></h2>\par
+\par
+<div class="solicitacao-details">\par
+    <div><strong>Status:</strong> <span class="status-badge status-<?php echo htmlspecialchars($solicitacao['status']); ?>"><?php echo htmlspecialchars(ucfirst($solicitacao['status'])); ?></span></div>\par
+    <div><strong>Requisitante:</strong> <?php echo htmlspecialchars($solicitacao['nome_usuario']); ?> (<?php echo htmlspecialchars($solicitacao['email_usuario']); ?>)</div>\par
+    <div><strong>Data de Cria\'e7\'e3o:</strong> <?php echo date('d/m/Y H:i', strtotime($solicitacao['criado_em'])); ?></div>\par
+    <div><strong>Data Prevista para Uso:</strong> <?php echo date('d/m/Y', strtotime($solicitacao['data_prevista'])); ?> \'e0s <?php echo date('H:i', strtotime($solicitacao['hora_prevista'])); ?></div>\par
+    <div><strong>Local Previsto para Uso:</strong> <?php echo htmlspecialchars($solicitacao['local_previsto']); ?></div>\par
+    <?php if (!empty($solicitacao['observacoes'])): ?>\par
+        <div><strong>Observa\'e7\'f5es:</strong> <?php echo nl2br(htmlspecialchars($solicitacao['observacoes'])); ?></div>\par
+    <?php endif; ?>\par
+</div>\par
+\par
+<h3>Itens Solicitados</h3>\par
+<div class="table-wrapper">\par
+    <table class="responsive-table">\par
+        <thead>\par
+            <tr>\par
+                <th>Material</th>\par
+                <th>C\'f3digo Interno</th>\par
+                <th>Qtd. Solicitada</th>\par
+                <th>Qtd. Entregue</th>\par
+                <th>Qtd. Devolvida</th>\par
+            </tr>\par
+        </thead>\par
+        <tbody>\par
+            <?php foreach ($itens as $item): ?>\par
+                <tr>\par
+                    <td><?php echo htmlspecialchars($item['nome_material']); ?></td>\par
+                    <td><?php echo htmlspecialchars($item['codigo_interno']); ?></td>\par
+                    <td><?php echo $item['quantidade_solic']; ?></td>\par
+                    <td><?php echo $item['quantidade_entreg'] ?? 'N/D'; ?></td>\par
+                    <td><?php echo $item['quantidade_dev'] ?? 'N/D'; ?></td>\par
+                </tr>\par
+            <?php endforeach; ?>\par
+        </tbody>\par
+    </table>\par
+</div>\par
+\par
+<a href="javascript:history.back()" class="btn btn-secondary" style="margin-top: 20px;">Voltar</a>\par
+\par
+<style>\par
+.solicitacao-details \{\par
+    background-color: #f8f9fa;\par
+    border: 1px solid #dee2e6;\par
+    border-radius: 8px;\par
+    padding: 20px;\par
+    margin-bottom: 30px;\par
+    display: flex;\par
+    flex-direction: column;\par
+    gap: 10px;\par
+\}\par
+.status-badge \{\par
+    padding: 3px 8px;\par
+    border-radius: 12px;\par
+    color: white;\par
+    font-weight: bold;\par
+    font-size: 0.9em;\par
+\}\par
+.status-pendente \{ background-color: #ffc107; color: #333; \}\par
+.status-aprovado \{ background-color: #28a745; \}\par
+.status-recusado \{ background-color: #dc3545; \}\par
+.status-entregue \{ background-color: #17a2b8; \}\par
+.status-devolvido \{ background-color: #6c757d; \}\par
+</style>\par
+\par
+<?php require_once 'templates/footer.php'; ?>\par
+\par
+\highlight3\b PASTA admin:\par
+\highlight0\par
+gerenciar_materiais.php\par
+\par
+\b0 <?php\par
+require_once '../templates/header.php';\par
+check_login('admin');\par
+\par
+$success_message = '';\par
+$error_message = '';\par
+$edit_material = null;\par
+\par
+// L\'f3gica para ADICIONAR ou EDITAR material\par
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_submit'])) \{\par
+    // Sanitiza\'e7\'e3o e valida\'e7\'e3o\par
+    $id_material = filter_input(INPUT_POST, 'id_material', FILTER_VALIDATE_INT);\par
+    $nome = trim(filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING));\par
+    $codigo_interno = trim(filter_input(INPUT_POST, 'codigo_interno', FILTER_SANITIZE_STRING));\par
+    $categoria = trim(filter_input(INPUT_POST, 'categoria', FILTER_SANITIZE_STRING));\par
+    $tipo = filter_input(INPUT_POST, 'tipo', FILTER_SANITIZE_STRING);\par
+    $quantidade = filter_input(INPUT_POST, 'quantidade', FILTER_VALIDATE_INT);\par
+    $quantidade_min = filter_input(INPUT_POST, 'quantidade_min', FILTER_VALIDATE_INT);\par
+    $status = filter_input(INPUT_POST, 'status', FILTER_VALIDATE_INT);\par
+    \par
+    try \{\par
+        if ($id_material) \{ // ATUALIZA\'c7\'c3O\par
+            $sql = "UPDATE materiais SET nome=?, codigo_interno=?, categoria=?, tipo=?, quantidade=?, quantidade_min=?, status=? WHERE id_material=?";\par
+            $stmt = $pdo->prepare($sql);\par
+            $stmt->execute([$nome, $codigo_interno, $categoria, $tipo, $quantidade, $quantidade_min, $status, $id_material]);\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Atualiza\'e7\'e3o de Material', "ID: \{$id_material\}");\par
+            $success_message = 'Material atualizado com sucesso!';\par
+        \} else \{ // CRIA\'c7\'c3O\par
+            $sql = "INSERT INTO materiais (nome, codigo_interno, categoria, tipo, quantidade, quantidade_min, status) VALUES (?, ?, ?, ?, ?, ?, ?)";\par
+            $stmt = $pdo->prepare($sql);\par
+            $stmt->execute([$nome, $codigo_interno, $categoria, $tipo, $quantidade, $quantidade_min, $status]);\par
+            $new_id = $pdo->lastInsertId();\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Cria\'e7\'e3o de Material', "ID: \{$new_id\}");\par
+            $success_message = 'Material criado com sucesso!';\par
+        \}\par
+    \} catch (PDOException $e) \{\par
+        $error_message = 'Erro ao salvar material: ' . $e->getMessage();\par
+    \}\par
+\}\par
+\par
+// Carregar dados para edi\'e7\'e3o\par
+if (isset($_GET['edit'])) \{\par
+    $id_edit = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);\par
+    $stmt = $pdo->prepare("SELECT * FROM materiais WHERE id_material = ?");\par
+    $stmt->execute([$id_edit]);\par
+    $edit_material = $stmt->fetch(PDO::FETCH_ASSOC);\par
+\}\par
+\par
+// Buscar todos os materiais\par
+$materiais = $pdo->query("SELECT * FROM materiais ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);\par
+?>\par
+\par
+<h2>Gerenciar Materiais</h2>\par
+\par
+<?php if ($success_message): ?><p class="success"><?php echo htmlspecialchars($success_message); ?></p><?php endif; ?>\par
+<?php if ($error_message): ?><p class="error"><?php echo htmlspecialchars($error_message); ?></p><?php endif; ?>\par
+\par
+<div class="form-container">\par
+    <h3><?php echo $edit_material ? 'Editar Material' : 'Adicionar Novo Material'; ?></h3>\par
+    <form action="gerenciar_materiais.php" method="POST">\par
+        <input type="hidden" name="form_submit" value="1">\par
+        <input type="hidden" name="id_material" value="<?php echo $edit_material['id_material'] ?? ''; ?>">\par
+        \par
+        <div class="form-group">\par
+            <label for="nome">Nome do Material</label>\par
+            <input type="text" name="nome" value="<?php echo htmlspecialchars($edit_material['nome'] ?? ''); ?>" required>\par
+        </div>\par
+        <!-- Outros campos do formul\'e1rio (c\'f3digo, categoria, etc.) -->\par
+        <div class="form-group">\par
+            <label>C\'f3digo Interno</label>\par
+            <input type="text" name="codigo_interno" value="<?php echo htmlspecialchars($edit_material['codigo_interno'] ?? ''); ?>">\par
+        </div>\par
+        <div class="form-group">\par
+            <label>Categoria</label>\par
+            <input type="text" name="categoria" value="<?php echo htmlspecialchars($edit_material['categoria'] ?? ''); ?>" required>\par
+        </div>\par
+        <div class="form-group">\par
+            <label>Tipo</label>\par
+            <select name="tipo" required>\par
+                <option value="consumivel" <?php echo (isset($edit_material['tipo']) && $edit_material['tipo'] == 'consumivel') ? 'selected' : ''; ?>>Consum\'edvel</option>\par
+                <option value="reutilizavel" <?php echo (isset($edit_material['tipo']) && $edit_material['tipo'] == 'reutilizavel') ? 'selected' : ''; ?>>Reutiliz\'e1vel</option>\par
+            </select>\par
+        </div>\par
+        <div class="form-group">\par
+            <label>Quantidade em Estoque</label>\par
+            <input type="number" name="quantidade" value="<?php echo $edit_material['quantidade'] ?? 0; ?>" required>\par
+        </div>\par
+        <div class="form-group">\par
+            <label>Estoque M\'ednimo</label>\par
+            <input type="number" name="quantidade_min" value="<?php echo $edit_material['quantidade_min'] ?? 0; ?>" required>\par
+        </div>\par
+        <div class="form-group">\par
+            <label>Status</label>\par
+            <select name="status" required>\par
+                <option value="1" <?php echo (!isset($edit_material['status']) || $edit_material['status'] == 1) ? 'selected' : ''; ?>>Ativo</option>\par
+                <option value="0" <?php echo (isset($edit_material['status']) && $edit_material['status'] == 0) ? 'selected' : ''; ?>>Inativo</option>\par
+            </select>\par
+        </div>\par
+        \par
+        <button type="submit"><?php echo $edit_material ? 'Atualizar Material' : 'Salvar Material'; ?></button>\par
+        <?php if ($edit_material): ?>\par
+            <a href="gerenciar_materiais.php" class="btn btn-secondary">Cancelar Edi\'e7\'e3o</a>\par
+        <?php endif; ?>\par
+    </form>\par
+</div>\par
+\par
+<h3>Materiais em Estoque</h3>\par
+<table class="responsive-table">\par
+    <thead>\par
+        <tr>\par
+            <th>Nome</th>\par
+            <th>Categoria</th>\par
+            <th>Tipo</th>\par
+            <th>Qtd.</th>\par
+            <th>Status</th>\par
+            <th>A\'e7\'f5es</th>\par
+        </tr>\par
+    </thead>\par
+    <tbody>\par
+        <?php foreach ($materiais as $material): ?>\par
+        <tr>\par
+            <td><?php echo htmlspecialchars($material['nome']); ?></td>\par
+            <td><?php echo htmlspecialchars($material['categoria']); ?></td>\par
+            <td><?php echo htmlspecialchars(ucfirst($material['tipo'])); ?></td>\par
+            <td><?php echo $material['quantidade']; ?></td>\par
+            <td><?php echo $material['status'] ? 'Ativo' : 'Inativo'; ?></td>\par
+            <td><a href="gerenciar_materiais.php?edit=<?php echo $material['id_material']; ?>" class="btn">Editar</a></td>\par
+        </tr>\par
+        <?php endforeach; ?>\par
+    </tbody>\par
+</table>\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\b gerenciar_solicitacoes.php\par
+\b0\par
+<?php\par
+require_once '../templates/header.php';\par
+check_login('admin');\par
+\par
+$success_message = '';\par
+$error_message = '';\par
+\par
+// Bloco de c\'f3digo para processar a atualiza\'e7\'e3o de status via formul\'e1rio POST\par
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_solicitacao'])) \{\par
+    $id_solicitacao = filter_input(INPUT_POST, 'id_solicitacao', FILTER_VALIDATE_INT);\par
+    $novo_status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING);\par
+    \par
+    if ($id_solicitacao && in_array($novo_status, ['pendente', 'aprovado', 'recusado', 'entregue', 'devolvido'])) \{\par
+        try \{\par
+            $pdo->beginTransaction();\par
+\par
+            // Busca o status atual da solicita\'e7\'e3o para valida\'e7\'e3o\par
+            $stmt_old = $pdo->prepare("SELECT status FROM solicitacoes WHERE id_solicitacao = ? FOR UPDATE");\par
+            $stmt_old->execute([$id_solicitacao]);\par
+            $status_antigo = $stmt_old->fetchColumn();\par
+\par
+            // Evita processamento desnecess\'e1rio se o status for o mesmo\par
+            if ($status_antigo === $novo_status) \{\par
+                throw new Exception("A solicita\'e7\'e3o j\'e1 est\'e1 com o status '\{$novo_status\}'. Nenhuma altera\'e7\'e3o foi feita.");\par
+            \}\par
+\par
+            // Define as regras de transi\'e7\'e3o de status permitidas (a "esteira")\par
+            $allowed_transitions = [\par
+                'pendente' => ['aprovado', 'recusado', 'entregue'],\par
+                'aprovado' => ['entregue', 'recusado'],\par
+                'recusado' => [], // De 'recusado' n\'e3o se pode ir para nenhum outro estado\par
+                'entregue' => ['devolvido'],\par
+                'devolvido' => [] // De 'devolvido' tamb\'e9m n\'e3o\par
+            ];\par
+\par
+            // Valida se a mudan\'e7a de status \'e9 permitida\par
+            if (!in_array($novo_status, $allowed_transitions[$status_antigo])) \{\par
+                throw new Exception("A\'e7\'e3o inv\'e1lida: n\'e3o \'e9 poss\'edvel alterar o status de '\{$status_antigo\}' para '\{$novo_status\}'.");\par
+            \}\par
+\par
+            // L\'f3gica para quando o status muda para "Entregue"\par
+            if ($novo_status === 'entregue' && $status_antigo !== 'entregue') \{\par
+                $itens_stmt = $pdo->prepare("\par
+                    SELECT si.id_material, si.quantidade_solic, m.nome AS nome_material, m.quantidade AS quantidade_atual\par
+                    FROM solicitacao_itens si JOIN materiais m ON si.id_material = m.id_material\par
+                    WHERE si.id_solicitacao = ?\par
+                ");\par
+                $itens_stmt->execute([$id_solicitacao]);\par
+                $itens_para_entrega = $itens_stmt->fetchAll(PDO::FETCH_ASSOC);\par
+\par
+                // VERIFICA\'c7\'c3O DE ESTOQUE CR\'cdTICA NO LADO DO SERVIDOR\par
+                foreach ($itens_para_entrega as $item) \{\par
+                    if ($item['quantidade_solic'] > $item['quantidade_atual']) \{\par
+                        throw new Exception(\par
+                            "Estoque insuficiente para o item '<strong>" . htmlspecialchars($item['nome_material']) . "</strong>'. " .\par
+                            "Solicitado: \{$item['quantidade_solic']\}, Dispon\'edvel: \{$item['quantidade_atual']\}. Opera\'e7\'e3o cancelada."\par
+                        );\par
+                    \}\par
+                \}\par
+\par
+                // Se passou na verifica\'e7\'e3o, prossegue com a baixa de estoque\par
+                foreach ($itens_para_entrega as $item) \{\par
+                    $pdo->prepare("UPDATE materiais SET quantidade = quantidade - ? WHERE id_material = ?")->execute([$item['quantidade_solic'], $item['id_material']]);\par
+                    $pdo->prepare("UPDATE solicitacao_itens SET quantidade_entreg = ? WHERE id_solicitacao = ? AND id_material = ?")->execute([$item['quantidade_solic'], $id_solicitacao, $item['id_material']]);\par
+                \}\par
+                registrar_log($pdo, $_SESSION['id_usuario'], 'Entrega de Material', "Solicita\'e7\'e3o ID: \{$id_solicitacao\}");\par
+            \}\par
+            \par
+            // L\'f3gica para quando o status muda para "Devolvido"\par
+            elseif ($novo_status === 'devolvido' && $status_antigo === 'entregue') \{\par
+                $itens_stmt = $pdo->prepare("\par
+                    SELECT si.id_material, si.quantidade_entreg \par
+                    FROM solicitacao_itens si JOIN materiais m ON si.id_material = m.id_material\par
+                    WHERE si.id_solicitacao = ? AND m.tipo = 'reutilizavel'\par
+                ");\par
+                $itens_stmt->execute([$id_solicitacao]);\par
+                $itens_reutilizaveis = $itens_stmt->fetchAll(PDO::FETCH_ASSOC);\par
+\par
+                foreach ($itens_reutilizaveis as $item) \{\par
+                    $pdo->prepare("UPDATE materiais SET quantidade = quantidade + ? WHERE id_material = ?")->execute([$item['quantidade_entreg'], $item['id_material']]);\par
+                    $pdo->prepare("UPDATE solicitacao_itens SET quantidade_dev = ? WHERE id_solicitacao = ? AND id_material = ?")->execute([$item['quantidade_entreg'], $id_solicitacao, $item['id_material']]);\par
+                \}\par
+                registrar_log($pdo, $_SESSION['id_usuario'], 'Devolu\'e7\'e3o de Material', "Solicita\'e7\'e3o ID: \{$id_solicitacao\}");\par
+            \}\par
+            \par
+            // Atualiza o status da solicita\'e7\'e3o no banco\par
+            $pdo->prepare("UPDATE solicitacoes SET status = ? WHERE id_solicitacao = ?")->execute([$novo_status, $id_solicitacao]);\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Mudan\'e7a de Status de Solicita\'e7\'e3o', "ID: \{$id_solicitacao\}, de '\{$status_antigo\}' para '\{$novo_status\}'");\par
+\par
+            $pdo->commit();\par
+            $success_message = "Status da solicita\'e7\'e3o #\{$id_solicitacao\} atualizado com sucesso!";\par
+\par
+        \} catch (Exception $e) \{\par
+            $pdo->rollBack();\par
+            $error_message = $e->getMessage();\par
+        \}\par
+    \}\par
+\}\par
+\par
+// Bloco para buscar os dados para exibi\'e7\'e3o na p\'e1gina\par
+// CORRE\'c7\'c3O: Usando LEFT JOIN para garantir que todas as solicita\'e7\'f5es sejam listadas\par
+$stmt_solicitacoes = $pdo->query("\par
+    SELECT s.*, u.nome as nome_usuario\par
+    FROM solicitacoes s\par
+    LEFT JOIN usuarios u ON s.id_usuario = u.id_usuario\par
+    ORDER BY s.criado_em DESC\par
+");\par
+$solicitacoes = $stmt_solicitacoes->fetchAll(PDO::FETCH_ASSOC);\par
+?>\par
+\par
+<h2>Gerenciar Solicita\'e7\'f5es</h2>\par
+\par
+<?php if ($success_message): ?><p class="success"><?php echo htmlspecialchars($success_message); ?></p><?php endif; ?>\par
+<?php if ($error_message): ?><p class="error"><?php echo $error_message; // Permite HTML como <strong> na msg de erro ?></p><?php endif; ?>\par
+\par
+<div class="table-wrapper">\par
+    <table class="responsive-table">\par
+        <thead>\par
+            <tr>\par
+                <th>ID</th>\par
+                <th>Requisitante</th>\par
+                <th>Data Prevista</th>\par
+                <th>Status</th>\par
+                <th>A\'e7\'f5es</th>\par
+            </tr>\par
+        </thead>\par
+        <tbody>\par
+            <?php if (empty($solicitacoes)): ?>\par
+                <tr>\par
+                    <td colspan="5" style="text-align: center; padding: 20px;">Nenhuma solicita\'e7\'e3o encontrada.</td>\par
+                </tr>\par
+            <?php else: ?>\par
+                <?php foreach ($solicitacoes as $s): ?>\par
+                <tr>\par
+                    <td><?php echo $s['id_solicitacao']; ?></td>\par
+                    <td>\par
+                        <?php echo htmlspecialchars($s['nome_usuario'] ?? 'Usu\'e1rio Removido'); ?>\par
+                    </td>\par
+                    <td><?php echo date('d/m/Y', strtotime($s['data_prevista'])); ?></td>\par
+                    <td><strong class="status-badge status-<?php echo htmlspecialchars($s['status']); ?>"><?php echo htmlspecialchars(ucfirst($s['status'])); ?></strong></td>\par
+                    <td style="display:flex; flex-wrap: wrap; gap: 5px; align-items: center;">\par
+                        <form action="gerenciar_solicitacoes.php" method="POST" style="display:inline-flex; gap: 5px; margin: 0;">\par
+                            <input type="hidden" name="id_solicitacao" value="<?php echo $s['id_solicitacao']; ?>">\par
+                            <select name="status">\par
+                                <option value="pendente" <?php if($s['status'] == 'pendente') echo 'selected'; ?>>Pendente</option>\par
+                                <option value="aprovado" <?php if($s['status'] == 'aprovado') echo 'selected'; ?>>Aprovado</option>\par
+                                <option value="recusado" <?php if($s['status'] == 'recusado') echo 'selected'; ?>>Recusado</option>\par
+                                <option value="entregue" <?php if($s['status'] == 'entregue') echo 'selected'; ?>>Entregue</option>\par
+                                <option value="devolvido" <?php if($s['status'] == 'devolvido') echo 'selected'; ?>>Devolvido</option>\par
+                            </select>\par
+                            <button type="submit" class="btn btn-secondary" style="padding: 8px 12px;">Alterar</button>\par
+                        </form>\par
+                        <a href="../ver_solicitacao.php?id=<?php echo $s['id_solicitacao']; ?>" class="btn">Ver Detalhes</a>\par
+                    </td>\par
+                </tr>\par
+                <?php endforeach; ?>\par
+            <?php endif; ?>\par
+        </tbody>\par
+    </table>\par
+</div>\par
+\par
+<?php \par
+require_once '../templates/footer.php'; \par
+?>\par
+\par
+\b gerenciar_usuarios.php\par
+\par
+\b0 <?php\par
+require_once '../templates/header.php';\par
+check_login('admin');\par
+\par
+$success_message = '';\par
+$error_message = '';\par
+$edit_user = null;\par
+\par
+// L\'f3gica para ADICIONAR ou EDITAR usu\'e1rio\par
+if ($_SERVER['REQUEST_METHOD'] === 'POST') \{\par
+    $id_usuario = filter_input(INPUT_POST, 'id_usuario', FILTER_VALIDATE_INT);\par
+    $nome = trim(filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING));\par
+    $email = trim(filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL));\par
+    $perfil = filter_input(INPUT_POST, 'perfil', FILTER_SANITIZE_STRING);\par
+    $status = filter_input(INPUT_POST, 'status', FILTER_VALIDATE_INT);\par
+    $senha = $_POST['senha']; // Senha n\'e3o \'e9 filtrada para permitir caracteres especiais\par
+\par
+    try \{\par
+        if ($id_usuario) \{ // ATUALIZA\'c7\'c3O\par
+            if (!empty($senha)) \{\par
+                $hash_senha = password_hash($senha, PASSWORD_DEFAULT);\par
+                $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, email=?, perfil=?, status=?, senha=? WHERE id_usuario=?");\par
+                $stmt->execute([$nome, $email, $perfil, $status, $hash_senha, $id_usuario]);\par
+            \} else \{\par
+                $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, email=?, perfil=?, status=? WHERE id_usuario=?");\par
+                $stmt->execute([$nome, $email, $perfil, $status, $id_usuario]);\par
+            \}\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Atualiza\'e7\'e3o de Usu\'e1rio', "ID: \{$id_usuario\}");\par
+            $success_message = 'Usu\'e1rio atualizado com sucesso!';\par
+        \} else \{ // CRIA\'c7\'c3O\par
+            if (empty($senha)) \{\par
+                throw new Exception("O campo senha \'e9 obrigat\'f3rio para novos usu\'e1rios.");\par
+            \}\par
+            $hash_senha = password_hash($senha, PASSWORD_DEFAULT);\par
+            $stmt = $pdo->prepare("INSERT INTO usuarios (nome, email, senha, perfil, status) VALUES (?, ?, ?, ?, ?)");\par
+            $stmt->execute([$nome, $email, $hash_senha, $perfil, $status]);\par
+            $new_id = $pdo->lastInsertId();\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Cria\'e7\'e3o de Usu\'e1rio', "ID: \{$new_id\}");\par
+            $success_message = 'Usu\'e1rio criado com sucesso!';\par
+        \}\par
+    \} catch (Exception $e) \{\par
+        $error_message = 'Erro: ' . $e->getMessage();\par
+    \}\par
+\}\par
+\par
+// L\'f3gica para carregar dados de um usu\'e1rio para edi\'e7\'e3o\par
+if (isset($_GET['edit'])) \{\par
+    $id_edit = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);\par
+    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id_usuario = ?");\par
+    $stmt->execute([$id_edit]);\par
+    $edit_user = $stmt->fetch(PDO::FETCH_ASSOC);\par
+\}\par
+\par
+// Buscar todos os usu\'e1rios para listar\par
+$usuarios = $pdo->query("SELECT id_usuario, nome, email, perfil, status FROM usuarios ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);\par
+?>\par
+\par
+<h2>Gerenciar Usu\'e1rios</h2>\par
+\par
+<?php if ($success_message): ?><p class="success"><?php echo htmlspecialchars($success_message); ?></p><?php endif; ?>\par
+<?php if ($error_message): ?><p class="error"><?php echo htmlspecialchars($error_message); ?></p><?php endif; ?>\par
+\par
+<!-- Formul\'e1rio de Cria\'e7\'e3o/Edi\'e7\'e3o -->\par
+<div class="form-container">\par
+    <h3><?php echo $edit_user ? 'Editar Usu\'e1rio' : 'Adicionar Novo Usu\'e1rio'; ?></h3>\par
+    <form action="gerenciar_usuarios.php" method="POST">\par
+        <input type="hidden" name="id_usuario" value="<?php echo $edit_user['id_usuario'] ?? ''; ?>">\par
+        \par
+        <div class="form-group">\par
+            <label for="nome">Nome Completo</label>\par
+            <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($edit_user['nome'] ?? ''); ?>" required>\par
+        </div>\par
+        \par
+        <div class="form-group">\par
+            <label for="email">E-mail</label>\par
+            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($edit_user['email'] ?? ''); ?>" required>\par
+        </div>\par
+\par
+        <div class="form-group">\par
+            <label for="senha">Senha</label>\par
+            <input type="password" id="senha" name="senha" placeholder="<?php echo $edit_user ? 'Deixe em branco para n\'e3o alterar' : ''; ?>">\par
+        </div>\par
+\par
+        <div class="form-group">\par
+            <label for="perfil">Perfil</label>\par
+            <select id="perfil" name="perfil" required>\par
+                <option value="requisitante" <?php echo (isset($edit_user['perfil']) && $edit_user['perfil'] == 'requisitante') ? 'selected' : ''; ?>>Requisitante</option>\par
+                <option value="admin" <?php echo (isset($edit_user['perfil']) && $edit_user['perfil'] == 'admin') ? 'selected' : ''; ?>>Administrador</option>\par
+            </select>\par
+        </div>\par
+        \par
+        <div class="form-group">\par
+            <label for="status">Status</label>\par
+            <select id="status" name="status" required>\par
+                <option value="1" <?php echo (!isset($edit_user['status']) || $edit_user['status'] == 1) ? 'selected' : ''; ?>>Ativo</option>\par
+                <option value="0" <?php echo (isset($edit_user['status']) && $edit_user['status'] == 0) ? 'selected' : ''; ?>>Inativo</option>\par
+            </select>\par
+        </div>\par
+        \par
+        <button type="submit"><?php echo $edit_user ? 'Atualizar Usu\'e1rio' : 'Salvar Usu\'e1rio'; ?></button>\par
+        <?php if ($edit_user): ?>\par
+            <a href="gerenciar_usuarios.php" class="btn btn-secondary">Cancelar Edi\'e7\'e3o</a>\par
+        <?php endif; ?>\par
+    </form>\par
+</div>\par
+\par
+<h3>Usu\'e1rios Cadastrados</h3>\par
+<table class="responsive-table">\par
+    <thead>\par
+        <tr>\par
+            <th>Nome</th>\par
+            <th>E-mail</th>\par
+            <th>Perfil</th>\par
+            <th>Status</th>\par
+            <th>A\'e7\'f5es</th>\par
+        </tr>\par
+    </thead>\par
+    <tbody>\par
+        <?php foreach ($usuarios as $usuario): ?>\par
+        <tr>\par
+            <td><?php echo htmlspecialchars($usuario['nome']); ?></td>\par
+            <td><?php echo htmlspecialchars($usuario['email']); ?></td>\par
+            <td><?php echo htmlspecialchars(ucfirst($usuario['perfil'])); ?></td>\par
+            <td><?php echo $usuario['status'] ? 'Ativo' : 'Inativo'; ?></td>\par
+            <td><a href="gerenciar_usuarios.php?edit=<?php echo $usuario['id_usuario']; ?>" class="btn">Editar</a></td>\par
+        </tr>\par
+        <?php endforeach; ?>\par
+    </tbody>\par
+</table>\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\b index.php\par
+\b0\par
+<?php\par
+require_once '../templates/header.php';\par
+check_login('admin');\par
+\par
+try \{\par
+    // Contagem de solicita\'e7\'f5es pendentes\par
+    $stmt_pendentes = $pdo->query("SELECT COUNT(*) FROM solicitacoes WHERE status = 'pendente'");\par
+    $solicitacoes_pendentes = $stmt_pendentes->fetchColumn();\par
+\par
+    // Contagem de materiais com estoque baixo\par
+    $stmt_estoque_baixo = $pdo->query("SELECT COUNT(*) FROM materiais WHERE quantidade < quantidade_min AND status = 1");\par
+    $estoque_baixo = $stmt_estoque_baixo->fetchColumn();\par
+\par
+    // Contagem de usu\'e1rios ativos\par
+    $stmt_usuarios = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE status = 1");\par
+    $usuarios_ativos = $stmt_usuarios->fetchColumn();\par
+\par
+\} catch (PDOException $e) \{\par
+    echo "<p class='error'>Erro ao carregar dados do painel: " . htmlspecialchars($e->getMessage()) . "</p>";\par
+    // Definir valores padr\'e3o em caso de erro\par
+    $solicitacoes_pendentes = $estoque_baixo = $usuarios_ativos = 'N/A';\par
+\}\par
+?>\par
+\par
+<h2>Painel do Administrador</h2>\par
+<p>Bem-vindo(a), <?php echo htmlspecialchars($_SESSION['nome']); ?>!</p>\par
+\par
+<div class="dashboard-widgets">\par
+    <div class="widget">\par
+        <h3>Solicita\'e7\'f5es Pendentes</h3>\par
+        <p class="widget-value"><?php echo $solicitacoes_pendentes; ?></p>\par
+        <a href="gerenciar_solicitacoes.php" class="widget-link">Ver Solicita\'e7\'f5es</a>\par
+    </div>\par
+    <div class="widget">\par
+        <h3>Itens com Estoque Baixo</h3>\par
+        <p class="widget-value"><?php echo $estoque_baixo; ?></p>\par
+        <a href="gerenciar_materiais.php" class="widget-link">Ver Materiais</a>\par
+    </div>\par
+    <div class="widget">\par
+        <h3>Usu\'e1rios Ativos</h3>\par
+        <p class="widget-value"><?php echo $usuarios_ativos; ?></p>\par
+        <a href="gerenciar_usuarios.php" class="widget-link">Ver Usu\'e1rios</a>\par
+    </div>\par
+</div>\par
+\par
+<style>\par
+.dashboard-widgets \{\par
+    display: flex;\par
+    gap: 20px;\par
+    flex-wrap: wrap;\par
+    margin-top: 20px;\par
+\}\par
+.widget \{\par
+    background-color: #f8f9fa;\par
+    border: 1px solid #dee2e6;\par
+    border-radius: 8px;\par
+    padding: 20px;\par
+    flex-grow: 1;\par
+    min-width: 250px;\par
+    text-align: center;\par
+\}\par
+.widget h3 \{\par
+    margin-top: 0;\par
+\}\par
+.widget-value \{\par
+    font-size: 2.5rem;\par
+    font-weight: bold;\par
+    color: #007bff;\par
+    margin: 10px 0;\par
+\}\par
+.widget-link \{\par
+    text-decoration: none;\par
+    color: #007bff;\par
+    font-weight: bold;\par
+\}\par
+</style>\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\b relatorios.php\par
+\par
+\b0 <?php\par
+require_once '../config.php';\par
+check_login('admin');\par
+\par
+if (isset($_GET['gerar_csv'])) \{\par
+    header('Content-Type: text/csv; charset=utf-8');\par
+    header('Content-Disposition: attachment; filename=relatorio_materiais.csv');\par
+\par
+    $output = fopen('php://output', 'w');\par
+    fputcsv($output, ['ID', 'Nome', 'Categoria', 'Quantidade em Estoque', 'Status']);\par
+\par
+    $stmt = $pdo->query("SELECT id_material, nome, categoria, quantidade, status FROM materiais ORDER BY nome");\par
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) \{\par
+        $row['status'] = $row['status'] ? 'Ativo' : 'Inativo';\par
+        fputcsv($output, $row);\par
+    \}\par
+    fclose($output);\par
+    exit();\par
+\}\par
+\par
+require_once '../templates/header.php';\par
+?>\par
+\par
+<h2>Relat\'f3rios</h2>\par
+<p>Selecione um tipo de relat\'f3rio para gerar.</p>\par
+\par
+<div class="relatorio-item">\par
+    <h3>Relat\'f3rio de Materiais em Estoque</h3>\par
+    <p>Gera um arquivo CSV com a lista completa de materiais e suas quantidades atuais.</p>\par
+    <a href="relatorios.php?gerar_csv=true" class="btn">Gerar Relat\'f3rio CSV</a>\par
+</div>\par
+\par
+<!-- Outros relat\'f3rios podem ser adicionados aqui -->\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\highlight3\b PASTA api:\par
+\highlight0\b0\par
+\b get_stock.php\par
+\par
+\b0 <?php\par
+header('Content-Type: application/json');\par
+require_once '../config.php';\par
+\par
+// Apenas permitir acesso se o usu\'e1rio estiver logado\par
+if (!isset($_SESSION['id_usuario'])) \{\par
+    echo json_encode(['error' => 'Acesso n\'e3o autorizado']);\par
+    exit();\par
+\}\par
+\par
+$id_material = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);\par
+\par
+if (!$id_material) \{\par
+    echo json_encode(['error' => 'ID de material inv\'e1lido']);\par
+    exit();\par
+\}\par
+\par
+try \{\par
+    $stmt = $pdo->prepare("SELECT quantidade FROM materiais WHERE id_material = ?");\par
+    $stmt->execute([$id_material]);\par
+    $material = $stmt->fetch(PDO::FETCH_ASSOC);\par
+\par
+    if ($material) \{\par
+        echo json_encode(['quantidade' => $material['quantidade']]);\par
+    \} else \{\par
+        echo json_encode(['quantidade' => 0]);\par
+    \}\par
+\} catch (PDOException $e) \{\par
+    echo json_encode(['error' => 'Erro ao consultar o banco de dados.']);\par
+\}\par
+?>\par
+\par
+\highlight3\b PASTA assets -> SUBPASTA css\par
+\highlight0\par
+style.css\par
+\par
+\b0 /* --- GERAL E RESET --- */\par
+*, *::before, *::after \{\par
+    box-sizing: border-box;\par
+\}\par
+\par
+body, html \{\par
+    margin: 0;\par
+    padding: 0;\par
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;\par
+    background-color: #f4f7f6;\par
+    color: #333;\par
+    line-height: 1.6;\par
+\}\par
+\par
+body \{\par
+    display: flex;\par
+    flex-direction: column;\par
+    min-height: 100vh;\par
+\}\par
+\par
+main \{\par
+    flex-grow: 1; /* Garante que o conte\'fado principal ocupe o espa\'e7o dispon\'edvel */\par
+\}\par
+\par
+.container \{\par
+    width: 95%;\par
+    max-width: 1200px;\par
+    margin: 20px auto; /* Centraliza o container e adiciona margem superior/inferior */\par
+    padding: 20px;\par
+    background: #fff;\par
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);\par
+    border-radius: 8px;\par
+\}\par
+\par
+/* --- HEADER E NAVEGA\'c7\'c3O --- */\par
+header \{\par
+    background-color: #0056b3; /* Tom de azul mais profissional */\par
+    color: white;\par
+    padding: 1rem 5%;\par
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);\par
+    width: 100%;\par
+\}\par
+\par
+.header-container \{\par
+    display: flex;\par
+    justify-content: space-between;\par
+    align-items: center;\par
+    width: 100%;\par
+    max-width: 1200px;\par
+    margin: 0 auto;\par
+\}\par
+\par
+header h1 \{\par
+    margin: 0;\par
+    font-size: 1.5rem;\par
+\}\par
+\par
+header h1 a \{\par
+    color: white;\par
+    text-decoration: none;\par
+\}\par
+\par
+header nav ul \{\par
+    list-style: none;\par
+    margin: 0;\par
+    padding: 0;\par
+    display: flex;\par
+    gap: 20px; /* Espa\'e7amento entre os itens do menu */\par
+\}\par
+\par
+header nav ul li a \{\par
+    color: white;\par
+    text-decoration: none;\par
+    font-weight: bold;\par
+    padding: 5px 10px;\par
+    border-radius: 4px;\par
+    transition: background-color 0.3s;\par
+\}\par
+\par
+header nav ul li a:hover \{\par
+    background-color: rgba(255, 255, 255, 0.2);\par
+\}\par
+\par
+.menu-toggle \{\par
+    display: none; /* Escondido em telas grandes */\par
+    background: none;\par
+    border: none;\par
+    color: white;\par
+    font-size: 2rem;\par
+    cursor: pointer;\par
+\}\par
+\par
+/* --- FORMUL\'c1RIOS E BOT\'d5ES --- */\par
+.form-container, form \{\par
+    display: flex;\par
+    flex-direction: column;\par
+    gap: 15px; /* Espa\'e7amento entre os campos */\par
+\}\par
+.form-container \{\par
+    background-color: #f8f9fa;\par
+    padding: 20px;\par
+    border-radius: 8px;\par
+    margin-bottom: 30px;\par
+\}\par
+label \{\par
+    font-weight: bold;\par
+    margin-bottom: 5px;\par
+\}\par
+input[type="text"], input[type="email"], input[type="password"],\par
+input[type="number"], input[type="date"], input[type="time"],\par
+select, textarea \{\par
+    width: 100%;\par
+    padding: 12px;\par
+    border: 1px solid #ccc;\par
+    border-radius: 4px;\par
+\}\par
+button, .btn \{\par
+    background-color: #007bff;\par
+    color: white;\par
+    padding: 12px 20px;\par
+    border: none;\par
+    border-radius: 4px;\par
+    cursor: pointer;\par
+    text-align: center;\par
+    text-decoration: none;\par
+    font-size: 1rem;\par
+    transition: background-color 0.3s;\par
+    align-self: flex-start; /* Alinha o bot\'e3o \'e0 esquerda */\par
+\}\par
+button:hover, .btn:hover \{\par
+    background-color: #0056b3;\par
+\}\par
+.btn-danger \{ background-color: #dc3545; \}\par
+.btn-secondary \{ background-color: #6c757d; \}\par
+\par
+/* --- TABELAS --- */\par
+.table-wrapper \{\par
+    overflow-x: auto; /* Permite scroll horizontal em tabelas largas em mobile */\par
+\}\par
+.responsive-table \{\par
+    width: 100%;\par
+    border-collapse: collapse;\par
+    margin-top: 20px;\par
+\}\par
+.responsive-table th, .responsive-table td \{\par
+    border: 1px solid #ddd;\par
+    padding: 12px;\par
+    text-align: left;\par
+\}\par
+.responsive-table th \{\par
+    background-color: #f2f2f2;\par
+    font-weight: bold;\par
+\}\par
+.responsive-table tr:nth-child(even) \{ background-color: #f9f9f9; \}\par
+.responsive-table tr:hover \{ background-color: #f1f1f1; \}\par
+\par
+/* --- P\'c1GINA DE LOGIN --- */\par
+.login-body \{\par
+    display: flex; justify-content: center; align-items: center;\par
+    height: 100vh; background-color: #f4f7f6;\par
+\}\par
+.login-container \{\par
+    background: white; padding: 40px; border-radius: 8px;\par
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center;\par
+    width: 90%; max-width: 400px;\par
+\}\par
+\par
+/* --- MENSAGENS E ALERTAS --- */\par
+.success \{ color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px; \}\par
+.error \{ color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; \}\par
+\par
+/* --- FOOTER --- */\par
+footer \{\par
+    text-align: center;\par
+    padding: 20px;\par
+    margin-top: 30px;\par
+    background-color: #e9ecef;\par
+    border-top: 1px solid #dee2e6;\par
+    color: #6c757d;\par
+\}\par
+\par
+/* --- RESPONSIVIDADE --- */\par
+@media (max-width: 820px) \{\par
+    .menu-toggle \{\par
+        display: block; /* Mostra o bot\'e3o hamburger */\par
+    \}\par
+\par
+    header nav \{\par
+        position: absolute;\par
+        top: 70px; /* Altura do header */\par
+        left: 0;\par
+        width: 100%;\par
+        background-color: #004a99; /* Fundo um pouco diferente para destacar */\par
+        display: none; /* Escondido por padr\'e3o */\par
+    \}\par
+    \par
+    header nav.active \{\par
+        display: block; /* Mostra o menu quando a classe 'active' \'e9 adicionada */\par
+    \}\par
+\par
+    header nav ul \{\par
+        flex-direction: column; /* Itens do menu em coluna */\par
+        width: 100%;\par
+        gap: 0;\par
+    \}\par
+\par
+    header nav ul li \{\par
+        text-align: center;\par
+        width: 100%;\par
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);\par
+    \}\par
+    \par
+    header nav ul li a \{\par
+        padding: 15px;\par
+        display: block;\par
+        width: 100%;\par
+        border-radius: 0;\par
+    \}\par
+\}\par
+\par
+\highlight3\b PASTA auth\par
+\highlight0\par
+login.php\par
+\par
+\b0 <?php\par
+require_once '../config.php';\par
+\par
+$error_message = '';\par
+\par
+if ($_SERVER["REQUEST_METHOD"] == "POST") \{\par
+    $email = $_POST['email'];\par
+    $senha = $_POST['senha'];\par
+\par
+    $sql = "SELECT id_usuario, nome, senha, perfil FROM usuarios WHERE email = :email AND status = 1";\par
+    $stmt = $pdo->prepare($sql);\par
+    $stmt->execute(['email' => $email]);\par
+    $user = $stmt->fetch();\par
+\par
+    if ($user && password_verify($senha, $user['senha'])) \{\par
+        $_SESSION['id_usuario'] = $user['id_usuario'];\par
+        $_SESSION['nome'] = $user['nome'];\par
+        $_SESSION['perfil'] = $user['perfil'];\par
+        header("Location: /sistema_estoque/index.php");\par
+        exit();\par
+    \} else \{\par
+        $error_message = "E-mail ou senha inv\'e1lidos.";\par
+    \}\par
+\}\par
+?>\par
+<!DOCTYPE html>\par
+<html lang="pt-br">\par
+\par
+<head>\par
+    <meta charset="UTF-8">\par
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\par
+    <title>Login - Sistema de Estoque</title>\par
+    <link rel="stylesheet" href="../assets/css/style.css">\par
+</head>\par
+\par
+<body class="login-body">\par
+    <div class="login-container">\par
+        <h2>Sistema de Controle de Estoque</h2>\par
+        <p>Escola T\'e9cnica de Enfermagem</p>\par
+        <form action="login.php" method="post">\par
+            <div class="form-group">\par
+                <label for="email">E-mail</label>\par
+                <input type="email" id="email" name="email" required>\par
+            </div>\par
+            <div class="form-group">\par
+                <label for="senha">Senha</label>\par
+                <input type="password" id="senha" name="senha" required>\par
+            </div>\par
+            <?php if ($error_message): ?>\par
+                <p class="error"><?php echo $error_message; ?></p>\par
+            <?php endif; ?>\par
+            <button type="submit">Entrar</button>\par
+        </form>\par
+    </div>\par
+</body>\par
+\par
+</html>\par
+\par
+\b logout.php\par
+\par
+\b0 <?php\par
+session_start();\par
+session_unset();\par
+session_destroy();\par
+header("Location: login.php");\par
+exit();\par
+?>\par
+\par
+\highlight3\b PASTA requisitante:\par
+\highlight0\par
+criar_solicitacao.php\par
+\par
+\b0 <?php\par
+require_once '../templates/header.php';\par
+check_login('requisitante');\par
+\par
+$success_message = '';\par
+$error_message = '';\par
+\par
+// L\'f3gica de processamento do formul\'e1rio quando enviado\par
+if ($_SERVER["REQUEST_METHOD"] == "POST") \{\par
+    // 1. Sanitiza\'e7\'e3o e valida\'e7\'e3o dos dados de entrada\par
+    $data_prevista = trim(filter_input(INPUT_POST, 'data_prevista'));\par
+    $hora_prevista = trim(filter_input(INPUT_POST, 'hora_prevista'));\par
+    $local_previsto = trim(filter_input(INPUT_POST, 'local_previsto', FILTER_SANITIZE_STRING));\par
+    $observacoes = trim(filter_input(INPUT_POST, 'observacoes', FILTER_SANITIZE_STRING));\par
+    $materiais_post = $_POST['materiais'] ?? [];\par
+    $quantidades_post = $_POST['quantidades'] ?? [];\par
+\par
+    // 2. L\'d3GICA DE AGREGA\'c7\'c3O PARA EVITAR ITENS DUPLICADOS\par
+    $itens_agregados = [];\par
+    if (is_array($materiais_post)) \{\par
+        foreach ($materiais_post as $index => $id_material) \{\par
+            $id_material = filter_var($id_material, FILTER_VALIDATE_INT);\par
+            $quantidade = filter_var($quantidades_post[$index], FILTER_VALIDATE_INT);\par
+\par
+            if ($id_material && $quantidade > 0) \{\par
+                if (isset($itens_agregados[$id_material])) \{\par
+                    // Se o material j\'e1 foi adicionado, apenas soma a nova quantidade\par
+                    $itens_agregados[$id_material] += $quantidade;\par
+                \} else \{\par
+                    // Adiciona o material pela primeira vez\par
+                    $itens_agregados[$id_material] = $quantidade;\par
+                \}\par
+            \}\par
+        \}\par
+    \}\par
+\par
+    // 3. Verifica se h\'e1 itens v\'e1lidos antes de prosseguir\par
+    if (empty($itens_agregados)) \{\par
+        $error_message = "Voc\'ea deve adicionar pelo menos um item v\'e1lido \'e0 solicita\'e7\'e3o.";\par
+    \} else \{\par
+        try \{\par
+            // Inicia uma transa\'e7\'e3o para garantir que tudo seja salvo corretamente\par
+            $pdo->beginTransaction();\par
+\par
+            // Insere a solicita\'e7\'e3o principal\par
+            $sql_solicitacao = "INSERT INTO solicitacoes (id_usuario, data_prevista, hora_prevista, local_previsto, observacoes) VALUES (?, ?, ?, ?, ?)";\par
+            $stmt_solicitacao = $pdo->prepare($sql_solicitacao);\par
+            $stmt_solicitacao->execute([$_SESSION['id_usuario'], $data_prevista, $hora_prevista, $local_previsto, $observacoes]);\par
+            $id_solicitacao = $pdo->lastInsertId();\par
+\par
+            // Insere os itens da solicita\'e7\'e3o (usando a lista agregada)\par
+            $sql_item = "INSERT INTO solicitacao_itens (id_solicitacao, id_material, quantidade_solic) VALUES (?, ?, ?)";\par
+            $stmt_item = $pdo->prepare($sql_item);\par
+\par
+            foreach ($itens_agregados as $id_material => $quantidade_total) \{\par
+                $stmt_item->execute([$id_solicitacao, $id_material, $quantidade_total]);\par
+            \}\par
+\par
+            // Registra a a\'e7\'e3o no log de auditoria\par
+            registrar_log($pdo, $_SESSION['id_usuario'], 'Cria\'e7\'e3o de Solicita\'e7\'e3o', "ID da Solicita\'e7\'e3o: \{$id_solicitacao\}");\par
+            \par
+            // Confirma as altera\'e7\'f5es no banco de dados\par
+            $pdo->commit();\par
+            $success_message = "Solicita\'e7\'e3o n\'ba \{$id_solicitacao\} criada com sucesso! <a href='../ver_solicitacao.php?id=\{$id_solicitacao\}'>Ver detalhes</a>";\par
+\par
+        \} catch (Exception $e) \{\par
+            // Em caso de erro, desfaz todas as altera\'e7\'f5es\par
+            $pdo->rollBack();\par
+            $error_message = "Erro ao criar solicita\'e7\'e3o: " . $e->getMessage();\par
+        \}\par
+    \}\par
+\}\par
+\par
+// Busca os materiais dispon\'edveis para preencher o formul\'e1rio\par
+$materiais_db = $pdo->query("SELECT id_material, nome, quantidade FROM materiais WHERE status = 1 ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);\par
+?>\par
+\par
+<h2>Criar Nova Solicita\'e7\'e3o de Material</h2>\par
+\par
+<?php if ($success_message): ?><p class="success"><?php echo $success_message; // Mensagem j\'e1 cont\'e9m link, n\'e3o precisa de htmlspecialchars ?></p><?php endif; ?>\par
+<?php if ($error_message): ?><p class="error"><?php echo htmlspecialchars($error_message); ?></p><?php endif; ?>\par
+\par
+<form action="criar_solicitacao.php" method="post" id="form-solicitacao">\par
+    <div class="form-group">\par
+        <label for="data_prevista">Data Prevista de Uso</label>\par
+        <input type="date" id="data_prevista" name="data_prevista" required min="<?php echo date('Y-m-d'); ?>">\par
+    </div>\par
+    <div class="form-group">\par
+        <label for="hora_prevista">Hora Prevista de Uso</label>\par
+        <input type="time" id="hora_prevista" name="hora_prevista" required>\par
+    </div>\par
+    <div class="form-group">\par
+        <label for="local_previsto">Local de Uso</label>\par
+        <input type="text" id="local_previsto" name="local_previsto" placeholder="Ex: Laborat\'f3rio 1, Sala 3" required>\par
+    </div>\par
+    <div class="form-group">\par
+        <label for="observacoes">Observa\'e7\'f5es</label>\par
+        <textarea id="observacoes" name="observacoes" rows="3" placeholder="Qualquer informa\'e7\'e3o adicional relevante"></textarea>\par
+    </div>\par
+\par
+    <h3>Itens da Solicita\'e7\'e3o</h3>\par
+    <div id="itens-container">\par
+        <div class="item-row">\par
+            <select name="materiais[]" class="material-select" required>\par
+                <option value="">Selecione um material</option>\par
+                <?php foreach ($materiais_db as $material): ?>\par
+                    <option value="<?php echo $material['id_material']; ?>"><?php echo htmlspecialchars($material['nome']); ?></option>\par
+                <?php endforeach; ?>\par
+            </select>\par
+            <input type="number" name="quantidades[]" class="quantidade-input" placeholder="Qtd." required min="1" style="width: 100px;">\par
+            <span class="stock-info"></span>\par
+            <button type="button" class="btn btn-danger remove-item">Remover</button>\par
+        </div>\par
+    </div>\par
+\par
+    <div style="display:flex; gap: 10px; margin-top: 10px;">\par
+        <button type="button" id="add-item" class="btn btn-secondary">Adicionar Outro Item</button>\par
+    </div>\par
+    <hr>\par
+    <div style="display:flex; gap: 10px;">\par
+        <button type="submit" id="submit-btn">Enviar Solicita\'e7\'e3o</button>\par
+        <a href="/sistema_estoque/requisitante/" class="btn btn-secondary">Cancelar</a>\par
+    </div>\par
+</form>\par
+\par
+<style>\par
+.item-row \{ display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; \}\par
+.item-row select \{ flex: 1; min-width: 200px; \}\par
+.stock-info \{ font-size: 0.9em; min-width: 150px; color: #6c757d; \}\par
+.item-row .btn-danger \{ padding: 8px 12px; \}\par
+</style>\par
+\par
+<script>\par
+document.addEventListener('DOMContentLoaded', function() \{\par
+    const itensContainer = document.getElementById('itens-container');\par
+    const addItemBtn = document.getElementById('add-item');\par
+    const submitBtn = document.getElementById('submit-btn');\par
+\par
+    async function checkStock(materialSelect, quantidadeInput, stockInfoSpan) \{\par
+        const materialId = materialSelect.value;\par
+        const quantidadeDesejada = parseInt(quantidadeInput.value, 10);\par
+        \par
+        if (!materialId || isNaN(quantidadeDesejada) || quantidadeDesejada <= 0) \{\par
+            stockInfoSpan.textContent = '';\par
+            validateAllFields();\par
+            return;\par
+        \}\par
+\par
+        try \{\par
+            const response = await fetch(`/sistema_estoque/api/get_stock.php?id=$\{materialId\}`);\par
+            const data = await response.json();\par
+\par
+            if (data.error) \{\par
+                stockInfoSpan.textContent = 'Erro ao verificar.'; stockInfoSpan.style.color = 'red';\par
+            \} else \{\par
+                const estoqueDisponivel = data.quantidade;\par
+                stockInfoSpan.textContent = `Dispon\'edvel: $\{estoqueDisponivel\}`;\par
+                if (quantidadeDesejada > estoqueDisponivel) \{\par
+                    stockInfoSpan.textContent += ' - Insuficiente!';\par
+                    stockInfoSpan.style.color = 'red';\par
+                \} else \{\par
+                    stockInfoSpan.style.color = 'green';\par
+                \}\par
+            \}\par
+            validateAllFields();\par
+        \} catch (error) \{\par
+            stockInfoSpan.textContent = 'Erro de conex\'e3o.'; stockInfoSpan.style.color = 'red';\par
+            validateAllFields();\par
+        \}\par
+    \}\par
+    \par
+    function validateAllFields() \{\par
+        let allValid = true;\par
+        const selectedMaterials = new Set();\par
+\par
+        document.querySelectorAll('.item-row').forEach(row => \{\par
+            const select = row.querySelector('.material-select');\par
+            const stockInfoSpan = row.querySelector('.stock-info');\par
+\par
+            // Valida estoque insuficiente\par
+            if (stockInfoSpan.style.color === 'red') \{\par
+                allValid = false;\par
+            \}\par
+            // Valida itens duplicados\par
+            if (select.value) \{\par
+                if (selectedMaterials.has(select.value)) \{\par
+                    allValid = false;\par
+                    select.style.borderColor = 'red';\par
+                \} else \{\par
+                    selectedMaterials.add(select.value);\par
+                    select.style.borderColor = '#ccc';\par
+                \}\par
+            \}\par
+        \});\par
+        submitBtn.disabled = !allValid;\par
+    \}\par
+\par
+    itensContainer.addEventListener('input', function(e) \{\par
+        const target = e.target;\par
+        if (target.classList.contains('quantidade-input') || target.classList.contains('material-select')) \{\par
+            const itemRow = target.closest('.item-row');\par
+            const materialSelect = itemRow.querySelector('.material-select');\par
+            const quantidadeInput = itemRow.querySelector('.quantidade-input');\par
+            const stockInfoSpan = itemRow.querySelector('.stock-info');\par
+            checkStock(materialSelect, quantidadeInput, stockInfoSpan);\par
+            if (target.classList.contains('material-select')) \{\par
+                validateAllFields(); // Valida duplicidade ao mudar a sele\'e7\'e3o\par
+            \}\par
+        \}\par
+    \});\par
+\par
+    itensContainer.addEventListener('click', function(e) \{\par
+        if (e.target.classList.contains('remove-item')) \{\par
+            if (itensContainer.children.length > 1) \{\par
+                e.target.closest('.item-row').remove();\par
+            \} else \{\par
+                const firstRow = itensContainer.querySelector('.item-row');\par
+                firstRow.querySelector('select').selectedIndex = 0;\par
+                firstRow.querySelector('input').value = '';\par
+                firstRow.querySelector('.stock-info').textContent = '';\par
+                firstRow.querySelector('.stock-info').style.color = '';\par
+            \}\par
+            validateAllFields();\par
+        \}\par
+    \});\par
+\par
+    addItemBtn.addEventListener('click', function() \{\par
+        const firstItemRow = itensContainer.firstElementChild;\par
+        const newItemRow = firstItemRow.cloneNode(true);\par
+        newItemRow.querySelector('select').selectedIndex = 0;\par
+        newItemRow.querySelector('input').value = '';\par
+        newItemRow.querySelector('.stock-info').textContent = '';\par
+        newItemRow.querySelector('.stock-info').style.color = '';\par
+        newItemRow.querySelector('.material-select').style.borderColor = '#ccc';\par
+        itensContainer.appendChild(newItemRow);\par
+        validateAllFields();\par
+    \});\par
+\par
+    validateAllFields(); // Executa uma valida\'e7\'e3o inicial\par
+\});\par
+</script>\par
+\par
+<?php\par
+require_once '../templates/footer.php';\par
+?>\par
+\par
+\b historico.php\par
+\par
+\b0 <?php\par
+require_once '../templates/header.php';\par
+check_login('requisitante');\par
+\par
+// Buscar o hist\'f3rico de solicita\'e7\'f5es do usu\'e1rio logado\par
+$id_usuario = $_SESSION['id_usuario'];\par
+$stmt = $pdo->prepare("\par
+    SELECT id_solicitacao, data_prevista, status, criado_em \par
+    FROM solicitacoes \par
+    WHERE id_usuario = ? \par
+    ORDER BY criado_em DESC\par
+");\par
+$stmt->execute([$id_usuario]);\par
+$solicitacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);\par
+?>\par
+\par
+<h2>Minhas Solicita\'e7\'f5es</h2>\par
+\par
+<?php if (empty($solicitacoes)): ?>\par
+    <p>Voc\'ea ainda n\'e3o fez nenhuma solicita\'e7\'e3o.</p>\par
+    <a href="criar_solicitacao.php" class="btn">Criar minha primeira solicita\'e7\'e3o</a>\par
+<?php else: ?>\par
+    <div class="table-wrapper">\par
+        <table class="responsive-table">\par
+            <thead>\par
+                <tr>\par
+                    <th>N\'ba da Solicita\'e7\'e3o</th>\par
+                    <th>Data de Cria\'e7\'e3o</th>\par
+                    <th>Data Prevista de Uso</th>\par
+                    <th>Status</th>\par
+                    <th>A\'e7\'f5es</th> <!-- NOVA COLUNA -->\par
+                </tr>\par
+            </thead>\par
+            <tbody>\par
+                <?php foreach ($solicitacoes as $s): ?>\par
+                <tr>\par
+                    <td><?php echo $s['id_solicitacao']; ?></td>\par
+                    <td><?php echo date('d/m/Y H:i', strtotime($s['criado_em'])); ?></td>\par
+                    <td><?php echo date('d/m/Y', strtotime($s['data_prevista'])); ?></td>\par
+                    <td><strong class="status-badge status-<?php echo htmlspecialchars($s['status']); ?>"><?php echo htmlspecialchars(ucfirst($s['status'])); ?></strong></td>\par
+                    <td>\par
+                        <!-- **NOVO LINK AQUI** -->\par
+                        <a href="../ver_solicitacao.php?id=<?php echo $s['id_solicitacao']; ?>" class="btn">Ver Detalhes</a>\par
+                    </td>\par
+                </tr>\par
+                <?php endforeach; ?>\par
+            </tbody>\par
+        </table>\par
+    </div>\par
+<?php endif; ?>\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\b index.php\par
+\par
+\b0 <?php\par
+require_once '../templates/header.php';\par
+check_login('requisitante');\par
+?>\par
+\par
+<h2>Painel do Requisitante</h2>\par
+<p>Bem-vindo(a), <?php echo htmlspecialchars($_SESSION['nome']); ?>!</p>\par
+<p>Use os links abaixo para gerenciar suas solicita\'e7\'f5es de materiais.</p>\par
+\par
+<div class="dashboard-actions">\par
+    <a href="criar_solicitacao.php" class="action-card">\par
+        <h3>Criar Nova Solicita\'e7\'e3o</h3>\par
+        <p>Pe\'e7a os materiais necess\'e1rios para suas atividades.</p>\par
+    </a>\par
+    <a href="historico.php" class="action-card">\par
+        <h3>Minhas Solicita\'e7\'f5es</h3>\par
+        <p>Consulte o status e o hist\'f3rico de todos os seus pedidos.</p>\par
+    </a>\par
+</div>\par
+\par
+<style>\par
+.dashboard-actions \{\par
+    margin-top: 30px;\par
+    display: flex;\par
+    gap: 20px;\par
+\}\par
+.action-card \{\par
+    background-color: #e9f7ff;\par
+    border: 1px solid #b3e0ff;\par
+    border-radius: 8px;\par
+    padding: 20px;\par
+    text-decoration: none;\par
+    color: #333;\par
+    flex: 1;\par
+    transition: transform 0.2s, box-shadow 0.2s;\par
+\}\par
+.action-card:hover \{\par
+    transform: translateY(-5px);\par
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);\par
+\}\par
+.action-card h3 \{\par
+    margin-top: 0;\par
+    color: #0056b3;\par
+\}\par
+</style>\par
+\par
+<?php require_once '../templates/footer.php'; ?>\par
+\par
+\highlight3\b PASTA templates:\par
+\highlight0\b0\par
+\b footer.php\par
+\par
+\b0 </div>\par
+</main>\par
+<footer>\par
+<p>\'a9 <?php echo date("Y"); ?> - Escola T\'e9cnica de Enfermagem. Todos os direitos reservados.</p>\par
+</footer>\par
+\par
+<!-- SCRIPT PARA O MENU RESPONSIVO -->\par
+<script>\par
+    document.addEventListener('DOMContentLoaded', function() \{\par
+        const menuToggle = document.querySelector('.menu-toggle');\par
+        const mainNav = document.querySelector('#main-nav');\par
+\par
+        if (menuToggle && mainNav) \{\par
+            menuToggle.addEventListener('click', function() \{\par
+                mainNav.classList.toggle('active');\par
+            \});\par
+        \}\par
+    \});\par
+</script>\par
+</body>\par
+</html>\par
+\par
+\b header.php\par
+\par
+\b0 <?php require_once __DIR__ . '/../config.php'; ?>\par
+<!DOCTYPE html>\par
+<html lang="pt-br">\par
+<head>\par
+    <meta charset="UTF-8">\par
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\par
+    <title>Sistema de Estoque</title>\par
+    <link rel="stylesheet" href="/sistema_estoque/assets/css/style.css">\par
+</head>\par
+<body>\par
+    <header>\par
+        <div class="header-container">\par
+            <h1><a href="/sistema_estoque/">Sistema de Estoque</a></h1>\par
+            \par
+            <!-- Bot\'e3o Hamburger para Mobile -->\par
+            <button class="menu-toggle" aria-label="Abrir menu">\f1\u9776?\f0 </button>\par
+\par
+            <!-- Adicionado ID "main-nav" para o JS -->\par
+            <nav id="main-nav">\par
+                <ul>\par
+                    <?php if (isset($_SESSION['perfil'])): ?>\par
+                        <?php if ($_SESSION['perfil'] === 'admin'): ?>\par
+                            <li><a href="/sistema_estoque/admin/">Painel</a></li>\par
+                            <li><a href="/sistema_estoque/admin/gerenciar_solicitacoes.php">Solicita\'e7\'f5es</a></li>\par
+                            <li><a href="/sistema_estoque/admin/gerenciar_materiais.php">Materiais</a></li>\par
+                            <li><a href="/sistema_estoque/admin/gerenciar_usuarios.php">Usu\'e1rios</a></li>\par
+                            <li><a href="/sistema_estoque/admin/relatorios.php">Relat\'f3rios</a></li>\par
+                        <?php else: ?>\par
+                            <li><a href="/sistema_estoque/requisitante/">Painel</a></li>\par
+                            <li><a href="/sistema_estoque/requisitante/criar_solicitacao.php">Nova Solicita\'e7\'e3o</a></li>\par
+                            <li><a href="/sistema_estoque/requisitante/historico.php">Minhas Solicita\'e7\'f5es</a></li>\par
+                        <?php endif; ?>\par
+                        <li><a href="/sistema_estoque/auth/logout.php">Sair</a></li>\par
+                    <?php endif; ?>\par
+                </ul>\par
+            </nav>\par
+        </div>\par
+    </header>\par
+    <main>\par
+        <div class="container">\b\par
+}
+ 

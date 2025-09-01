@@ -1,0 +1,106 @@
+-- =========================================================
+-- REESTRUTURAÇÃO COMPLETA DO BANCO DE DADOS
+-- Sistema: Controle de Estoque - Escola Técnica de Enfermagem
+-- =========================================================
+
+-- Criar banco de dados
+DROP DATABASE IF EXISTS `escola_enfermagem_estoque`;
+CREATE DATABASE IF NOT EXISTS `escola_enfermagem_estoque`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
+
+USE `escola_enfermagem_estoque`;
+
+-- --------------------------------------------------------
+-- Tabela: usuarios
+-- --------------------------------------------------------
+CREATE TABLE `usuarios` (
+  `id_usuario` INT(11) NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(100) NOT NULL,
+  `senha` VARCHAR(255) NOT NULL,
+  `perfil` ENUM('admin','requisitante') NOT NULL,
+  `status` TINYINT(1) NOT NULL DEFAULT 1,
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id_usuario`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Inserir administrador padrão (senha: admin123)
+INSERT INTO `usuarios` (`nome`, `email`, `senha`, `perfil`, `status`) VALUES
+('Administrador Padrão', 'admin@escola.com', '$2y$10$e.p6.jIqC2wZ6y.e0b5ZLOwW.3q.2E/n9w5t3jD/a3r2c3v4X5y6z.', 'admin', 1);
+
+-- --------------------------------------------------------
+-- Tabela: materiais
+-- --------------------------------------------------------
+CREATE TABLE `materiais` (
+  `id_material` INT(11) NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `codigo_interno` VARCHAR(50) DEFAULT NULL,
+  `categoria` VARCHAR(50) NOT NULL,
+  `tipo` ENUM('consumivel','reutilizavel') NOT NULL,
+  `quantidade` INT(11) NOT NULL DEFAULT 0,
+  `quantidade_min` INT(11) NOT NULL DEFAULT 0,
+  `status` TINYINT(1) NOT NULL DEFAULT 1,
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id_material`),
+  UNIQUE KEY `codigo_interno` (`codigo_interno`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabela: solicitacoes
+-- --------------------------------------------------------
+CREATE TABLE `solicitacoes` (
+  `id_solicitacao` INT(11) NOT NULL AUTO_INCREMENT,
+  `id_usuario` INT(11) NOT NULL,
+  `data_prevista` DATE NOT NULL,
+  `hora_prevista` TIME NOT NULL,
+  `local_previsto` VARCHAR(100) NOT NULL,
+  `status` ENUM('pendente','aprovado','recusado','entregue','devolvido') NOT NULL DEFAULT 'pendente',
+  `observacoes` TEXT DEFAULT NULL,
+  `criado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  `atualizado_em` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id_solicitacao`),
+  KEY `id_usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabela: solicitacao_itens
+-- --------------------------------------------------------
+CREATE TABLE `solicitacao_itens` (
+  `id_item` INT(11) NOT NULL AUTO_INCREMENT,
+  `id_solicitacao` INT(11) NOT NULL,
+  `id_material` INT(11) NOT NULL,
+  `quantidade_solic` INT(11) NOT NULL,
+  `quantidade_entreg` INT(11) DEFAULT 0,
+  `quantidade_dev` INT(11) DEFAULT 0,
+  PRIMARY KEY (`id_item`),
+  KEY `id_solicitacao` (`id_solicitacao`),
+  KEY `id_material` (`id_material`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Tabela: logs_auditoria
+-- --------------------------------------------------------
+CREATE TABLE `logs_auditoria` (
+  `id_log` INT(11) NOT NULL AUTO_INCREMENT,
+  `id_usuario` INT(11) NOT NULL,
+  `acao` VARCHAR(100) NOT NULL,
+  `detalhes` TEXT DEFAULT NULL,
+  `data_hora` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  PRIMARY KEY (`id_log`),
+  KEY `id_usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Chaves Estrangeiras
+-- --------------------------------------------------------
+ALTER TABLE `solicitacoes`
+  ADD CONSTRAINT `solicitacoes_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
+
+ALTER TABLE `solicitacao_itens`
+  ADD CONSTRAINT `solicitacao_itens_ibfk_1` FOREIGN KEY (`id_solicitacao`) REFERENCES `solicitacoes` (`id_solicitacao`) ON DELETE CASCADE,
+  ADD CONSTRAINT `solicitacao_itens_ibfk_2` FOREIGN KEY (`id_material`) REFERENCES `materiais` (`id_material`) ON DELETE CASCADE;
+
+ALTER TABLE `logs_auditoria`
+  ADD CONSTRAINT `logs_auditoria_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE;
